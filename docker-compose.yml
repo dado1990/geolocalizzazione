@@ -1,0 +1,134 @@
+version: '3.8'
+
+services:
+  # PostgreSQL con PostGIS
+  postgres:
+    image: postgis/postgis:15-3.3-alpine
+    container_name: bustracker_postgres
+    environment:
+      POSTGRES_DB: bustracker
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/migrations:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    command: >
+      postgres
+      -c shared_buffers=512MB
+      -c max_connections=50
+      -c work_mem=10MB
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bustracker
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: bustracker_redis
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD:-redis123}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - bustracker
+
+  # Backend API (Node.js)
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bustracker_api
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/bustracker
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis123}@redis:6379
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-production}
+      PORT: 3000
+      WS_PORT: 3001
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"  # API REST
+      - "3001:3001"  # WebSocket
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: npm run dev
+    networks:
+      - bustracker
+
+  # Console Admin Frontend
+  console:
+    build:
+      context: ./console-frontend
+      dockerfile: Dockerfile.dev
+    container_name: bustracker_console
+    environment:
+      VITE_API_URL: http://localhost:3000
+      VITE_WS_URL: ws://localhost:3001
+    volumes:
+      - ./console-frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    command: npm run dev
+    networks:
+      - bustracker
+
+  # Monitoring Frontend
+  monitor:
+    build:
+      context: ./monitor-frontend
+      dockerfile: Dockerfile.dev
+    container_name: bustracker_monitor
+    environment:
+      VITE_API_URL: http://localhost:3000
+      VITE_WS_URL: ws://localhost:3001
+    volumes:
+      - ./monitor-frontend:/app
+      - /app/node_modules
+    ports:
+      - "5174:5173"
+    command: npm run dev
+    networks:
+      - bustracker
+
+  # PWA (sviluppo web, Capacitor build separato)
+  pwa:
+    build:
+      context: ./pwa
+      dockerfile: Dockerfile.dev
+    container_name: bustracker_pwa
+    environment:
+      VITE_API_URL: http://localhost:3000
+    volumes:
+      - ./pwa:/app
+      - /app/node_modules
+    ports:
+      - "5175:5173"
+    command: npm run dev
+    networks:
+      - bustracker
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  bustracker:
+    driver: bridge

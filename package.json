@@ -1,0 +1,43 @@
+{
+  "name": "bus-tracker",
+  "version": "1.0.0",
+  "description": "Sistema di tracciamento autobus in tempo reale",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "console-frontend",
+    "monitor-frontend",
+    "pwa"
+  ],
+  "scripts": {
+    "dev": "docker-compose up",
+    "dev:build": "docker-compose up --build",
+    "stop": "docker-compose down",
+    "clean": "docker-compose down -v",
+    "logs": "docker-compose logs -f",
+    "logs:api": "docker-compose logs -f api",
+    "logs:postgres": "docker-compose logs -f postgres",
+    "backend:install": "cd backend && npm install",
+    "console:install": "cd console-frontend && npm install",
+    "monitor:install": "cd monitor-frontend && npm install",
+    "pwa:install": "cd pwa && npm install",
+    "install:all": "npm run backend:install && npm run console:install && npm run monitor:install && npm run pwa:install",
+    "db:migrate": "cd backend && npm run migrate",
+    "db:seed": "cd backend && npm run seed",
+    "db:reset": "docker-compose down postgres && docker volume rm geolocalizzazione_postgres_data && docker-compose up -d postgres",
+    "test": "npm run test --workspaces",
+    "lint": "npm run lint --workspaces",
+    "format": "npm run format --workspaces"
+  },
+  "keywords": [
+    "bus-tracker",
+    "gps",
+    "real-time",
+    "fleet-management"
+  ],
+  "author": "Bus Tracker Team",
+  "license": "MIT",
+  "devDependencies": {
+    "prettier": "^3.2.5"
+  }
+}

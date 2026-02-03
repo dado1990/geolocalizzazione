@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:geolocalizzazione-bus.comunenumana.com)",
+      "Bash(npm install:*)",
+      "Bash(docker-compose up:*)",
+      "Bash(docker:*)",
+      "Bash(curl:*)",
+      "Bash(npm run migrate:*)",
+      "Bash(npm run seed:*)",
+      "Bash(pgrep:*)"
+    ]
+  }
+}
