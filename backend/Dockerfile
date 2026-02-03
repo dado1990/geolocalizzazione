@@ -10,7 +10,7 @@ RUN apk add --no-cache postgresql-client
 COPY package*.json ./
 
 # Installa dipendenze
-RUN npm ci
+RUN npm install --no-audit --no-fund
 
 # Copia codice sorgente
 COPY . .

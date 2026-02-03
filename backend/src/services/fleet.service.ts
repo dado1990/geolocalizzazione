@@ -1,5 +1,5 @@
 import { query } from '../config/database.js';
-import type { LiveBus, Line, Bus, Stop } from '../types/index.js';
+import type { LiveBus, Line, Bus, Stop, Route, RouteWithStops, RouteStop } from '../types/index.js';
 
 export class FleetService {
   // Get live bus positions (main endpoint for monitoring)
@@ -151,6 +151,36 @@ export class FleetService {
     const result = await query<Stop>(sql, params);
     return result.rows;
   }
+
+  // Get routes (optionally by line or active period)
+  async getRoutes(options?: { line_id?: number; activeOnly?: boolean }): Promise<Route[]> {
+    let sql = 'SELECT * FROM routes WHERE 1=1';
+    const params: any[] = [];
+    let paramIndex = 1;
+
+    if (options?.line_id) {
+      sql += ` AND line_id = $${paramIndex}`;
+      params.push(options.line_id);
+      paramIndex++;
+    }
+
+    if (options?.activeOnly) {
+      sql += ` AND (active_from IS NULL OR active_from <= CURRENT_DATE)\n              AND (active_to IS NULL OR active_to >= CURRENT_DATE)`;
+    }
+
+    sql += ' ORDER BY created_at DESC';
+
+    const result = await query<Route>(sql, params);
+    return result.rows;
+  }
+
+  // Get route with stops
+  async getRouteWithStops(routeId: number): Promise<RouteWithStops | null> {
+    const routeResult = await query<Route>('SELECT * FROM routes WHERE id = $1', [routeId]);
+    const route = routeResult.rows[0];
+    if (!route) return null;
+
+    const stopsResult = await query<RouteStop>(\n      `SELECT rs.route_id, rs.stop_id, rs.sequence, s.name, s.code, s.latitude, s.longitude, s.address\n       FROM route_stops rs\n       JOIN stops s ON s.id = rs.stop_id\n       WHERE rs.route_id = $1\n       ORDER BY rs.sequence ASC`,\n      [routeId]\n    );\n\n    return {\n      ...route,\n      stops: stopsResult.rows,\n    };\n  }
 
   // Count buses by status
   async getBusStats(): Promise<{

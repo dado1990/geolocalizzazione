@@ -9,7 +9,7 @@ export const pool = new Pool({
   port: parseInt(process.env.DB_PORT || '5432'),
   database: process.env.DB_NAME || 'bustracker',
   user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'postgres',
+  password: process.env.DB_PASSWORD || (() => { throw new Error('DB_PASSWORD not defined'); })(),
   max: 20, // max connections
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,

@@ -18,9 +18,14 @@ const locationSchema = z.object({
   nonce: z.string().uuid().optional(),
 });
 
+const batchSchema = z.object({
+  locations: z.array(locationSchema).min(1),
+  sent_at: z.string().datetime().optional(),
+});
+
 export async function telemetryRoutes(app: FastifyInstance) {
   // POST /telemetry/location - Submit device location
-  app.post<{ Body: LocationPayload }>(
+  app.post<{ Body: any }>(
     '/telemetry/location',
     {
       preHandler: [app.authenticate],
@@ -76,9 +81,42 @@ export async function telemetryRoutes(app: FastifyInstance) {
       }
 
       const deviceId = payload.id;
+      const batchParsed = batchSchema.safeParse(request.body);
+
+      // Batch mode
+      if (batchParsed.success) {
+        let accepted = 0;
+        let rejected = 0;
+        const ids: number[] = [];
+
+        for (const loc of batchParsed.data.locations) {
+          if (loc.nonce) {
+            const isValidNonce = await telemetryService.validateNonce(loc.nonce, deviceId);
+            if (!isValidNonce) {
+              rejected += 1;
+              continue;
+            }
+          }
+          const result = await telemetryService.storeLocation(deviceId, loc);
+          accepted += 1;
+          ids.push(result.id);
+        }
+
+        const now = new Date();
+        const nextExpected = new Date(now.getTime() + 120000);
+
+        return reply.status(202).send({
+          accepted,
+          rejected,
+          ids,
+          received_at: now.toISOString(),
+          next_expected_at: nextExpected.toISOString(),
+        });
+      }
+
+      // Single mode
       const data = locationSchema.parse(request.body);
 
-      // Validate nonce if provided (anti-replay)
       if (data.nonce) {
         const isValidNonce = await telemetryService.validateNonce(data.nonce, deviceId);
         if (!isValidNonce) {
@@ -89,7 +127,6 @@ export async function telemetryRoutes(app: FastifyInstance) {
         }
       }
 
-      // Store location
       const result = await telemetryService.storeLocation(deviceId, data);
 
       const now = new Date();

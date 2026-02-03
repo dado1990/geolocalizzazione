@@ -8,10 +8,10 @@ services:
     environment:
       POSTGRES_DB: bustracker
       POSTGRES_USER: ${DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./backend/migrations:/docker-entrypoint-initdb.d
+      - ./backend/src/db/migrations:/docker-entrypoint-initdb.d
     ports:
       - "5432:5432"
     command: >
@@ -31,7 +31,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: bustracker_redis
-    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD:-redis123}
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD}
     volumes:
       - redis_data:/data
     ports:
@@ -53,16 +53,14 @@ services:
     environment:
       NODE_ENV: development
       DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/bustracker
-      REDIS_URL: redis://:${REDIS_PASSWORD:-redis123}@redis:6379
-      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-production}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      JWT_SECRET: ${JWT_SECRET}
       PORT: 3000
-      WS_PORT: 3001
     volumes:
       - ./backend:/app
       - /app/node_modules
     ports:
-      - "3000:3000"  # API REST
-      - "3001:3001"  # WebSocket
+      - "3000:3000"  # API REST + WebSocket
     depends_on:
       postgres:
         condition: service_healthy
@@ -80,7 +78,7 @@ services:
     container_name: bustracker_console
     environment:
       VITE_API_URL: http://localhost:3000
-      VITE_WS_URL: ws://localhost:3001
+      VITE_WS_URL: ws://localhost:3000/ws/fleet
     volumes:
       - ./console-frontend:/app
       - /app/node_modules
@@ -98,7 +96,7 @@ services:
     container_name: bustracker_monitor
     environment:
       VITE_API_URL: http://localhost:3000
-      VITE_WS_URL: ws://localhost:3001
+      VITE_WS_URL: ws://localhost:3000/ws/fleet
     volumes:
       - ./monitor-frontend:/app
       - /app/node_modules

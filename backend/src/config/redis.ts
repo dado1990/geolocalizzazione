@@ -5,9 +5,8 @@ import 'dotenv/config';
 export const redis = new Redis({
   host: process.env.REDIS_HOST || 'localhost',
   port: parseInt(process.env.REDIS_PORT || '6379'),
-  password: process.env.REDIS_PASSWORD || 'redis123',
+  password: process.env.REDIS_PASSWORD || (() => { throw new Error('REDIS_PASSWORD not defined'); })(),
   maxRetriesPerRequest: 3,
-  retryDelayOnFailover: 100,
 });
 
 redis.on('connect', () => {

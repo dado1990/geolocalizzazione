@@ -12,6 +12,7 @@ import { authRoutes } from './routes/auth.routes.js';
 import { deviceRoutes } from './routes/device.routes.js';
 import { telemetryRoutes } from './routes/telemetry.routes.js';
 import { fleetRoutes } from './routes/fleet.routes.js';
+import { adminRoutes } from './routes/admin.routes.js';
 
 // Import config
 import { pool } from './config/database.js';
@@ -57,7 +58,7 @@ await app.register(cors, {
 
 // JWT
 await app.register(jwt, {
-  secret: process.env.JWT_SECRET || 'dev-secret-change-in-production',
+  secret: process.env.JWT_SECRET || (() => { throw new Error('FATAL: JWT_SECRET environment variable is not defined!'); })(),
 });
 
 // Authentication decorator
@@ -174,6 +175,7 @@ await app.register(authRoutes);
 await app.register(deviceRoutes);
 await app.register(telemetryRoutes);
 await app.register(fleetRoutes);
+await app.register(adminRoutes);
 
 // WebSocket endpoint for real-time updates
 app.get('/ws/fleet', { websocket: true }, (connection, req) => {

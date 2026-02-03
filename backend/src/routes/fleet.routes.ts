@@ -193,4 +193,53 @@ export async function fleetRoutes(app: FastifyInstance) {
       return { stops };
     }
   );
+
+  // GET /routes - Get routes (optionally by line/active)
+  app.get(
+    '/routes',
+    {
+      preHandler: [app.authenticate],
+      schema: {
+        description: 'Get routes',
+        tags: ['Fleet'],
+        security: [{ bearerAuth: [] }],
+        querystring: {
+          type: 'object',
+          properties: {
+            line_id: { type: 'number' },
+            active: { type: 'boolean', default: false },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const { line_id, active } = request.query as { line_id?: number; active?: boolean };
+      const routes = await fleetService.getRoutes({ line_id, activeOnly: !!active });
+      return { routes };
+    }
+  );
+
+  // GET /routes/:id - Get route with stops
+  app.get(
+    '/routes/:id',
+    {
+      preHandler: [app.authenticate],
+      schema: {
+        description: 'Get route details with stops',
+        tags: ['Fleet'],
+        security: [{ bearerAuth: [] }],
+      },
+    },
+    async (request, reply) => {
+      const id = Number((request.params as any).id);
+      const route = await fleetService.getRouteWithStops(id);
+      if (!route) {
+        return reply.status(404).send({
+          error: 'NOT_FOUND',
+          message: 'Route not found',
+        });
+      }
+      return route;
+    }
+  );
 }

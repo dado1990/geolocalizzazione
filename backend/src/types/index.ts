@@ -77,6 +77,21 @@ export interface Route {
   created_at: Date;
 }
 
+export interface RouteStop {
+  route_id?: number;
+  stop_id: number;
+  sequence: number;
+  name?: string;
+  code?: string | null;
+  latitude?: number;
+  longitude?: number;
+  address?: string | null;
+}
+
+export interface RouteWithStops extends Route {
+  stops: RouteStop[];
+}
+
 // Location types
 export interface Location {
   id: number;
